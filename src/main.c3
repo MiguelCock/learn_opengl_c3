@@ -4,9 +4,6 @@ import std;
 import std::gfx;
 import opengl::gl;
 
-const VERT = $embed("../resources/vert.vs");
-const FRAG = $embed("../resources/frag.fs");
-
 fn void main()
 {
     gfx::init("Hello", { .init_opengl = true })!!;

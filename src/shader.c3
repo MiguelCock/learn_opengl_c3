@@ -3,22 +3,28 @@ module opengl_test;
 import std;
 import std::gfx;
 import opengl::gl;
+import spng;
 
 struct Program
 {
-	GLuint vbo, vao, ebo;
 	GLuint vertexShader;
 	GLuint fragmentShader;
 	GLuint shaderProgram;
+	GLuint vbo, vao, ebo;
+	GLuint texture;
 }
+
+const VERT = $embed("../resources/vert.vs");
+const FRAG = $embed("../resources/frag.fs");
+const IMG = $embed("../resources/leaves.png");
 
 // set up vertex data (and buffer(s)) and configure vertex attributes
 // ------------------------------------------------------------------
 float[*] vertices = {
-	0.5f,  0.5f, 0.0f, 1, 0, 0,  // top right
-	0.5f, -0.5f, 0.0f, 0, 1, 0,  // bottom right
-	-0.5f, -0.5f, 0.0f, 0, 0, 1,  // bottom left
-	-0.5f,  0.5f, 0.0f, 1, 1, 1   // top left 
+	0.5,  	0.5, 	0.0f, 	1, 0, 0, 	1, 1,  // top right
+	0.5, 	-0.5, 	0.0f, 	0, 1, 0, 	1, 0,  // bottom right
+	-0.5, 	-0.5, 	0.0f, 	0, 0, 1, 	0, 0,  // bottom left
+	-0.5,  0.5, 	0.0f, 	1, 1, 1, 	0, 1   // top left 
 };
 GLuint[*] indices = {  // note that we start from 0!
 	0, 1, 3,  // first Triangle
@@ -78,11 +84,14 @@ fn void Program.generate_vao(&self)
     gl::bindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.ebo);
     gl::bufferData(GL_ELEMENT_ARRAY_BUFFER, indices.len * GLuint::size, &indices, GL_STATIC_DRAW);
 
-    gl::vertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * float::size, null);
+    gl::vertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * float::size, null);
     gl::enableVertexAttribArray(0);
 
-	gl::vertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * float::size, (void*)(3 * float::size));
+	gl::vertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * float::size, (void*)(3 * float::size));
     gl::enableVertexAttribArray(1);
+
+	gl::vertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * float::size, (void*)(6 * float::size));
+    gl::enableVertexAttribArray(2);
 
     // note that this is allowed, the call to glVertexAttribPointer registered vbo as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
     gl::bindBuffer(GL_ARRAY_BUFFER, 0); 
@@ -90,9 +99,31 @@ fn void Program.generate_vao(&self)
     // remember: do NOT unbind the ebo while a vao is active as the bound element buffer object IS stored in the vao; keep the ebo bound.
     //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
+	self.texture;
+    gl::genTextures(1, &self.texture);
+    gl::bindTexture(GL_TEXTURE_2D, self.texture); // all upcoming GL_TEXTURE_2D operations now have effect on this texture object
+    // set the texture wrapping parameters
+    gl::texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+    gl::texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // set texture filtering parameters
+    gl::texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+    gl::texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    // load image, create texture and generate mipmaps
+	Context *spng = spng::new(0);
+	spng.set_png_buffer(IMG, IMG.len);
+	Ihdr pngHdr;
+	spng.get_ihdr(&pngHdr);
+	usz size;
+	spng.decoded_image_size(Format.RGBA8, &size);
+	char* pixels = malloc((sz)size);
+	defer free(pixels);
+	spng.decode_image(pixels, size, Format.RGBA8, 0);
+    gl::texImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)pngHdr.width, (GLsizei)pngHdr.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    gl::generateMipmap(GL_TEXTURE_2D);
+
     // You can unbind the vao afterwards so other vao calls won't accidentally modify this vao, but this rarely happens. Modifying other
     // vaos requires a call to glBindVertexArray anyways so we generally don't unbind vaos (nor vbos) when it's not directly necessary.
-    gl::bindVertexArray(0); 
+    gl::bindVertexArray(0);
 }
 
 fn void Program.delete_program(&self)
@@ -111,10 +142,12 @@ fn void Program.send_uniform(&self)
 	float greenValue = (math::sin((float)timeValue) / 2.0) + 0.5;
 	int vertexColorLocation = gl::getUniformLocation(self.shaderProgram, "color");
 	gl::uniform4f(vertexColorLocation, 0, 0, 0, 1);
-}	
+}
 
 fn void Program.draw(&self)
 {
+	gl::bindTexture(GL_TEXTURE_2D, self.texture);
+
 	// draw our first triangle
 	gl::useProgram(self.shaderProgram);
 	gl::bindVertexArray(self.vao); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
