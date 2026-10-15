@@ -2,6 +2,7 @@ module opengl_test;
 
 import std;
 import std::gfx;
+import std::math::matrix;
 import opengl::gl;
 import spng;
 
@@ -114,6 +115,9 @@ fn void Program.generate_vao(&self)
 	Ihdr pngHdr;
 	spng.get_ihdr(&pngHdr);
 	usz size;
+
+	io::printn(pngHdr.color_type == ColorType.INDEXED);
+
 	spng.decoded_image_size(Format.RGBA8, &size);
 	char* pixels = malloc((sz)size);
 	defer free(pixels);
@@ -135,13 +139,20 @@ fn void Program.delete_program(&self)
 	gl::deleteBuffers(1, &self.ebo);
 }
 
+double timeValue;
+
 fn void Program.send_uniform(&self)
 {
 	// update shader uniform
-	double timeValue = (double)std::time::now();
+	timeValue += 0.005;
 	float greenValue = (math::sin((float)timeValue) / 2.0) + 0.5;
 	int vertexColorLocation = gl::getUniformLocation(self.shaderProgram, "color");
 	gl::uniform4f(vertexColorLocation, 0, 0, 0, 1);
+
+	Mat4 mat = matrix::IDENTITY4.translate({0.5, -0.5, 0}).rotate((float)timeValue*5, {0, 0, 1});
+
+	int transform_ocation = gl::getUniformLocation(self.shaderProgram, "transform");
+    gl::uniformMatrix4fv(transform_ocation, 1, GL_FALSE, (GLfloat*)&mat);
 }
 
 fn void Program.draw(&self)
@@ -150,6 +161,10 @@ fn void Program.draw(&self)
 
 	// draw our first triangle
 	gl::useProgram(self.shaderProgram);
+
+	int textureLocation = gl::getUniformLocation(self.shaderProgram, "texture1");
+    gl::uniform1i(textureLocation, 0);
+
 	gl::bindVertexArray(self.vao); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 	//glDrawArrays(GL_TRIANGLES, 0, 6);
 	gl::drawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, null);

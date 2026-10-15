@@ -22,13 +22,16 @@ fn void main()
 	hints.minor = 3;
 	GfxGlContext* cont = win.create_opengl_context(&hints)!!;
 
-	if (win.get_opengl_context() == null)
+	if (cont == null)
 	{
 		io::printn("Failed to create OpenGL 3.3 core context. Check driver support.");
 		return;
 	}
 
 	gl::load_gl_internal((GLLoadFn)&gfx::get_opengl_proc);
+
+	gl::enable(GL_BLEND);
+	gl::blendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	Program program = create_program();
     defer program.delete_program();
