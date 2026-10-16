@@ -20,6 +20,7 @@ fn void main()
 	GfxGlHints hints;
 	hints.major = 3;
 	hints.minor = 3;
+	hints.depth = 24;
 	GfxGlContext* cont = win.create_opengl_context(&hints)!!;
 
 	if (cont == null)
@@ -30,8 +31,9 @@ fn void main()
 
 	gl::load_gl_internal((GLLoadFn)&gfx::get_opengl_proc);
 
-	gl::enable(GL_BLEND);
+	gl::enable(GL_BLEND); 
 	gl::blendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	gl::enable(GL_DEPTH_TEST);
 
 	Program program = create_program();
     defer program.delete_program();
@@ -42,7 +44,7 @@ fn void main()
         win.close_window();
 
 		gl::clearColor(0.2f, 0.3f, 0.3f, 1.0f);
-		gl::clear(GL_COLOR_BUFFER_BIT);
+		gl::clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         program.send_uniform();
 		program.draw();

@@ -22,14 +22,50 @@ const IMG = $embed("../resources/leaves.png");
 // set up vertex data (and buffer(s)) and configure vertex attributes
 // ------------------------------------------------------------------
 float[*] vertices = {
-	0.5,  	0.5, 	0.0f, 	1, 0, 0, 	1, 1,  // top right
-	0.5, 	-0.5, 	0.0f, 	0, 1, 0, 	1, 0,  // bottom right
-	-0.5, 	-0.5, 	0.0f, 	0, 0, 1, 	0, 0,  // bottom left
-	-0.5,  0.5, 	0.0f, 	1, 1, 1, 	0, 1   // top left 
+    // front face
+    -0.5, -0.5,  0.5,  0.0, 0.0,
+     0.5, -0.5,  0.5,  1.0, 0.0,
+     0.5,  0.5,  0.5,  1.0, 1.0,
+    -0.5,  0.5,  0.5,  0.0, 1.0,
+
+    // back face
+     0.5, -0.5, -0.5,  0.0, 0.0,
+    -0.5, -0.5, -0.5,  1.0, 0.0,
+    -0.5,  0.5, -0.5,  1.0, 1.0,
+     0.5,  0.5, -0.5,  0.0, 1.0,
+
+    // left face
+    -0.5, -0.5, -0.5,  0.0, 0.0,
+    -0.5, -0.5,  0.5,  1.0, 0.0,
+    -0.5,  0.5,  0.5,  1.0, 1.0,
+    -0.5,  0.5, -0.5,  0.0, 1.0,
+
+    // right face
+     0.5, -0.5,  0.5,  0.0, 0.0,
+     0.5, -0.5, -0.5,  1.0, 0.0,
+     0.5,  0.5, -0.5,  1.0, 1.0,
+     0.5,  0.5,  0.5,  0.0, 1.0,
+
+    // bottom face
+    -0.5, -0.5, -0.5,  0.0, 0.0,
+     0.5, -0.5, -0.5,  1.0, 0.0,
+     0.5, -0.5,  0.5,  1.0, 1.0,
+    -0.5, -0.5,  0.5,  0.0, 1.0,
+
+    // top face
+     0.5,  0.5, -0.5,  1.0, 1.0,
+    -0.5,  0.5, -0.5,  0.0, 1.0,
+    -0.5,  0.5,  0.5,  0.0, 0.0,
+     0.5,  0.5,  0.5,  1.0, 0.0
 };
-GLuint[*] indices = {  // note that we start from 0!
-	0, 1, 3,  // first Triangle
-	1, 2, 3   // second Triangle
+
+GLuint[*] indices = {
+    0, 1, 2, 2, 3, 0,        // front
+    4, 5, 6, 6, 7, 4,        // back
+    8, 9, 10, 10, 11, 8,     // left
+    12, 13, 14, 14, 15, 12,  // right
+    16, 17, 18, 18, 19, 16,  // bottom
+    20, 21, 22, 22, 23, 20   // top
 };
 
 fn Program create_program()
@@ -85,14 +121,11 @@ fn void Program.generate_vao(&self)
     gl::bindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.ebo);
     gl::bufferData(GL_ELEMENT_ARRAY_BUFFER, indices.len * GLuint::size, &indices, GL_STATIC_DRAW);
 
-    gl::vertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * float::size, null);
+    gl::vertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * float::size, null);
     gl::enableVertexAttribArray(0);
 
-	gl::vertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * float::size, (void*)(3 * float::size));
+	gl::vertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * float::size, (void*)(3 * float::size));
     gl::enableVertexAttribArray(1);
-
-	gl::vertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * float::size, (void*)(6 * float::size));
-    gl::enableVertexAttribArray(2);
 
     // note that this is allowed, the call to glVertexAttribPointer registered vbo as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
     gl::bindBuffer(GL_ARRAY_BUFFER, 0); 
@@ -139,21 +172,46 @@ fn void Program.delete_program(&self)
 	gl::deleteBuffers(1, &self.ebo);
 }
 
-double timeValue;
+float timeValue;
 
 fn void Program.send_uniform(&self)
 {
 	// update shader uniform
 	timeValue += 0.005;
-	float greenValue = (math::sin((float)timeValue) / 2.0) + 0.5;
+	float greenValue = (math::sin(timeValue)) + 0.5;
 	int vertexColorLocation = gl::getUniformLocation(self.shaderProgram, "color");
 	gl::uniform4f(vertexColorLocation, 0, 0, 0, 1);
 
-	Mat4 mat = matrix::IDENTITY4.translate({0.5, -0.5, 0}).rotate((float)timeValue*5, {0, 0, 1});
+	Mat4 mat = matrix::IDENTITY4.translate({math::cos(timeValue), math::sin(timeValue), 0}).rotate(timeValue*5, {1, 1, 1});
 
-	int transform_ocation = gl::getUniformLocation(self.shaderProgram, "transform");
-    gl::uniformMatrix4fv(transform_ocation, 1, GL_FALSE, (GLfloat*)&mat);
+	int transform_location = gl::getUniformLocation(self.shaderProgram, "transform");
+    gl::uniformMatrix4fv(transform_location, 1, GL_FALSE, (GLfloat*)&mat);
+
+
+	//Mat4 model = matrix::IDENTITY4.rotate((float)math::deg_to_rad(-55), {1, 0, 0});
+	Mat4 view = matrix::IDENTITY4.translate({0,0, -3});
+	Mat4 projection = matrix::perspective((float)math::deg_to_rad(45), 800/600, 0.1, 100);
+
+	//int model_location = gl::getUniformLocation(self.shaderProgram, "model");
+    //gl::uniformMatrix4fv(model_location, 1, GL_FALSE, (GLfloat*)&model);
+	int view_location = gl::getUniformLocation(self.shaderProgram, "view");
+    gl::uniformMatrix4fv(view_location, 1, GL_FALSE, (GLfloat*)&view);
+	int projection_location = gl::getUniformLocation(self.shaderProgram, "projection");
+    gl::uniformMatrix4fv(projection_location, 1, GL_FALSE, (GLfloat*)&projection);
 }
+
+Vec3[*] cubePositions = {
+    { 0.0f,  0.0f,  0.0f}, 
+    { 2.0f,  5.0f, -15.0f}, 
+    {-1.5f, -2.2f, -2.5f},  
+    {-3.8f, -2.0f, -12.3f},  
+    { 2.4f, -0.4f, -3.5f},  
+    {-1.7f,  3.0f, -7.5f},  
+    { 1.3f, -2.0f, -2.5f},  
+    { 1.5f,  2.0f, -2.5f}, 
+    { 1.5f,  0.2f, -1.5f}, 
+    {-1.3f,  1.0f, -1.5f}  
+};
 
 fn void Program.draw(&self)
 {
@@ -162,11 +220,21 @@ fn void Program.draw(&self)
 	// draw our first triangle
 	gl::useProgram(self.shaderProgram);
 
-	int textureLocation = gl::getUniformLocation(self.shaderProgram, "texture1");
-    gl::uniform1i(textureLocation, 0);
+	//int textureLocation = gl::getUniformLocation(self.shaderProgram, "texture1");
+    //gl::uniform1i(textureLocation, 0);
 
 	gl::bindVertexArray(self.vao); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 	//glDrawArrays(GL_TRIANGLES, 0, 6);
-	gl::drawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, null);
+
+	for(uint i = 0; i < 10; i++)
+	{
+		Mat4 model = matrix::IDENTITY4.translate(cubePositions[i]).rotate((float)math::deg_to_rad(20 * i), {1, 0.3, 0.5});
+		int model_location = gl::getUniformLocation(self.shaderProgram, "model");
+    	gl::uniformMatrix4fv(model_location, 1, GL_FALSE, (GLfloat*)&model);
+
+		gl::drawElements(GL_TRIANGLES, indices.len, GL_UNSIGNED_INT, null);
+	}
+
+	//gl::drawElements(GL_TRIANGLES, indices.len, GL_UNSIGNED_INT, null);
 	// glBindVertexArray(0); // no need to unbind it every time 
 }
