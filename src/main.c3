@@ -3,6 +3,7 @@ module opengl_test;
 import std;
 import std::gfx;
 import opengl::gl;
+import std::thread;
 
 fn void main()
 {
@@ -39,14 +40,21 @@ fn void main()
     defer program.delete_program();
     program.generate_vao();
 
+	Camera cam = create_camera();
+
+	Data data = {win, &cam};
+	Thread thread;
+	thread.create((ThreadFn)&thread_fn, &data)!!;
+	defer thread.join()!!;
+
     while (!win.should_close())
     {
-        win.close_window();
+        //win.input(&cam);
 
 		gl::clearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		gl::clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        program.send_uniform();
+        program.send_uniform(&cam);
 		program.draw();
 
 		win.swap_opengl_buffers();

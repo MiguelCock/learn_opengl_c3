@@ -19,8 +19,6 @@ const VERT = $embed("../resources/vert.vs");
 const FRAG = $embed("../resources/frag.fs");
 const IMG = $embed("../resources/leaves.png");
 
-// set up vertex data (and buffer(s)) and configure vertex attributes
-// ------------------------------------------------------------------
 float[*] vertices = {
     // front face
     -0.5, -0.5,  0.5,  0.0, 0.0,
@@ -72,27 +70,20 @@ fn Program create_program()
 {
 	Program program;
 
-	// build and compile our shader program
-    // ------------------------------------
-    // vertex shader
 	program.vertexShader = gl::createShader(GL_VERTEX_SHADER);
 	gl::shaderSource(program.vertexShader, 1, (GLchar**)&&VERT, null);
     gl::compileShader(program.vertexShader);
-	// check for shader compile errors
 	check_for_errors("ERROR::SHADER::VERTEX::COMPILATION_FAILED: %s", program.vertexShader);
-	// fragment shader
+
     program.fragmentShader = gl::createShader(GL_FRAGMENT_SHADER);
     gl::shaderSource(program.fragmentShader, 1, (GLchar**)&&FRAG, null);
     gl::compileShader(program.fragmentShader);
-    // check for shader compile errors
 	check_for_errors("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED: %s", program.fragmentShader);
 
-	// link shaders
     program.shaderProgram = gl::createProgram();
     gl::attachShader(program.shaderProgram, program.vertexShader);
     gl::attachShader(program.shaderProgram, program.fragmentShader);
     gl::linkProgram(program.shaderProgram);
-    // check for linking errors
 	int success;
     char[512] infoLog;
 	gl::getProgramiv(program.shaderProgram, GL_LINK_STATUS, &success);
@@ -112,7 +103,6 @@ fn void Program.generate_vao(&self)
 	gl::genVertexArrays(1, &self.vao);
     gl::genBuffers(1, &self.vbo);
     gl::genBuffers(1, &self.ebo);
-    // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
     gl::bindVertexArray(self.vao);
 
     gl::bindBuffer(GL_ARRAY_BUFFER, self.vbo);
@@ -127,29 +117,21 @@ fn void Program.generate_vao(&self)
 	gl::vertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * float::size, (void*)(3 * float::size));
     gl::enableVertexAttribArray(1);
 
-    // note that this is allowed, the call to glVertexAttribPointer registered vbo as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
     gl::bindBuffer(GL_ARRAY_BUFFER, 0); 
-
-    // remember: do NOT unbind the ebo while a vao is active as the bound element buffer object IS stored in the vao; keep the ebo bound.
-    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 	self.texture;
     gl::genTextures(1, &self.texture);
-    gl::bindTexture(GL_TEXTURE_2D, self.texture); // all upcoming GL_TEXTURE_2D operations now have effect on this texture object
-    // set the texture wrapping parameters
-    gl::texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
-    gl::texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // set texture filtering parameters
+    gl::bindTexture(GL_TEXTURE_2D, self.texture);
+    gl::texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	gl::texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     gl::texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     gl::texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    // load image, create texture and generate mipmaps
+
 	Context *spng = spng::new(0);
 	spng.set_png_buffer(IMG, IMG.len);
 	Ihdr pngHdr;
 	spng.get_ihdr(&pngHdr);
 	usz size;
-
-	io::printn(pngHdr.color_type == ColorType.INDEXED);
 
 	spng.decoded_image_size(Format.RGBA8, &size);
 	char* pixels = malloc((sz)size);
@@ -158,8 +140,6 @@ fn void Program.generate_vao(&self)
     gl::texImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)pngHdr.width, (GLsizei)pngHdr.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
     gl::generateMipmap(GL_TEXTURE_2D);
 
-    // You can unbind the vao afterwards so other vao calls won't accidentally modify this vao, but this rarely happens. Modifying other
-    // vaos requires a call to glBindVertexArray anyways so we generally don't unbind vaos (nor vbos) when it's not directly necessary.
     gl::bindVertexArray(0);
 }
 
@@ -174,28 +154,22 @@ fn void Program.delete_program(&self)
 
 float timeValue;
 
-fn void Program.send_uniform(&self)
+fn void Program.send_uniform(&self, Camera* cam)
 {
-	// update shader uniform
 	timeValue += 0.005;
 	float greenValue = (math::sin(timeValue)) + 0.5;
 	int vertexColorLocation = gl::getUniformLocation(self.shaderProgram, "color");
 	gl::uniform4f(vertexColorLocation, 0, 0, 0, 1);
 
 	Mat4 mat = matrix::IDENTITY4.translate({math::cos(timeValue), math::sin(timeValue), 0}).rotate(timeValue*5, {1, 1, 1});
-
 	int transform_location = gl::getUniformLocation(self.shaderProgram, "transform");
     gl::uniformMatrix4fv(transform_location, 1, GL_FALSE, (GLfloat*)&mat);
 
-
-	//Mat4 model = matrix::IDENTITY4.rotate((float)math::deg_to_rad(-55), {1, 0, 0});
-	Mat4 view = matrix::IDENTITY4.translate({0,0, -3});
-	Mat4 projection = matrix::perspective((float)math::deg_to_rad(45), 800/600, 0.1, 100);
-
-	//int model_location = gl::getUniformLocation(self.shaderProgram, "model");
-    //gl::uniformMatrix4fv(model_location, 1, GL_FALSE, (GLfloat*)&model);
+	cam.view = matrix::look_at(cam.pos, cam.pos + cam.front, cam.up);
 	int view_location = gl::getUniformLocation(self.shaderProgram, "view");
-    gl::uniformMatrix4fv(view_location, 1, GL_FALSE, (GLfloat*)&view);
+    gl::uniformMatrix4fv(view_location, 1, GL_FALSE, (GLfloat*)&cam.view);
+
+	Mat4 projection = matrix::perspective(cam.fov, 800/600, 0.1, 100);
 	int projection_location = gl::getUniformLocation(self.shaderProgram, "projection");
     gl::uniformMatrix4fv(projection_location, 1, GL_FALSE, (GLfloat*)&projection);
 }
@@ -217,14 +191,9 @@ fn void Program.draw(&self)
 {
 	gl::bindTexture(GL_TEXTURE_2D, self.texture);
 
-	// draw our first triangle
 	gl::useProgram(self.shaderProgram);
 
-	//int textureLocation = gl::getUniformLocation(self.shaderProgram, "texture1");
-    //gl::uniform1i(textureLocation, 0);
-
-	gl::bindVertexArray(self.vao); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-	//glDrawArrays(GL_TRIANGLES, 0, 6);
+	gl::bindVertexArray(self.vao);
 
 	for(uint i = 0; i < 10; i++)
 	{
@@ -234,7 +203,4 @@ fn void Program.draw(&self)
 
 		gl::drawElements(GL_TRIANGLES, indices.len, GL_UNSIGNED_INT, null);
 	}
-
-	//gl::drawElements(GL_TRIANGLES, indices.len, GL_UNSIGNED_INT, null);
-	// glBindVertexArray(0); // no need to unbind it every time 
 }
