@@ -16,39 +16,12 @@ fn void check_for_errors(String format, GLuint program)
     }
 }
 
-fn bool GfxWindow.input(&self, Camera* cam)
+fn void GfxWindow.input(&self, Camera* cam)
 {
-    if (try e = gfx::poll(self))
-    {
-        switch (e.type)
-        {
-            case WINDOW_CLOSE: 
-                return true;
-            case KEY_PRESSED:
-                if (e.key.value == ESCAPE) return true;
-                if (e.key.value == F) self.set_fullscreen(!self.is_fullscreen());
-            default:
-                break;
-        }
+    while (try e = gfx::poll(self));
+	
+	if (gfx::is_key_down(ESCAPE, self)) return;
+	if (gfx::is_key_down(F, self)) self.set_fullscreen(!self.is_fullscreen());
 
-		cam.update(self, &e);
-    }
-
-	return false;
-}
-
-struct Data
-{
-	GfxWindow* win;
-	Camera* cam;
-}
-
-fn void thread_fn(void* args)
-{
-	Data* data = (Data*)args;
-	while (true)
-	{
-		if (data.win.input(data.cam)) break;
-	}
-	return;
+	cam.update(self);
 }

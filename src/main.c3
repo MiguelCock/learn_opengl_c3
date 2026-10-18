@@ -42,14 +42,9 @@ fn void main()
 
 	Camera cam = create_camera();
 
-	Data data = {win, &cam};
-	Thread thread;
-	thread.create((ThreadFn)&thread_fn, &data)!!;
-	defer thread.join()!!;
-
     while (!win.should_close())
     {
-        //win.input(&cam);
+        win.input(&cam);
 
 		gl::clearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		gl::clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

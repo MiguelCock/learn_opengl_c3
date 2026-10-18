@@ -34,62 +34,57 @@ fn Camera create_camera()
 	return cam;
 }
 
-float yaw = -90;
-float pitch = 0;
+float yaw = -120;
+float pitch = 20;
 float lastX =  900 / 2;
 float lastY =  600 / 2;
 bool firstMouse = true;
+float cameraSpeed = 0.2;
 
-fn void Camera.update(&self, GfxWindow* win, GfxEvent* event)
+fn void Camera.update(&self, GfxWindow* win)
 {
-	float cameraSpeed = 0.2;
+	// KEYSS
+	if (gfx::is_key_down(W, win) || gfx::is_key_down(UP, win)) self.pos += cameraSpeed * self.front;
+	if (gfx::is_key_down(S, win) || gfx::is_key_down(DOWN, win)) self.pos -= cameraSpeed * self.front;
+	if (gfx::is_key_down(A, win) || gfx::is_key_down(LEFT, win)) self.pos -= self.front.cross(self.up).normalize() * cameraSpeed;
+	if (gfx::is_key_down(D, win) || gfx::is_key_down(RIGHT, win)) self.pos += self.front.cross(self.up).normalize() * cameraSpeed;
 
-	switch (event.type)
-        {
-            case KEY_PRESSED:
-                if (event.key.value == W || event.key.value == UP) self.pos += cameraSpeed * self.front;
-				if (event.key.value == S || event.key.value == DOWN) self.pos -= cameraSpeed * self.front;
-				if (event.key.value == A || event.key.value == LEFT) self.pos -= self.front.cross(self.up).normalize() * cameraSpeed;
-				if (event.key.value == D || event.key.value == RIGHT) self.pos += self.front.cross(self.up).normalize() * cameraSpeed;
+	// MOUSE
+	GfxPoint mouse_pos = win.get_mouse();
 
-			case MOUSE_MOTION:
-				GfxPoint mouse_pos = win.get_mouse();
+	if (firstMouse)
+	{
+		lastX = mouse_pos.x;
+		lastY = mouse_pos.y;
+		firstMouse = false;
+	}
 
-				if (firstMouse)
-				{
-					lastX = mouse_pos.x;
-					lastY = mouse_pos.y;
-					firstMouse = false;
-				}
+	float xoffset = mouse_pos.x - lastX;
+	float yoffset = lastY - mouse_pos.y; // reversed since y-coordinates go from bottom to top
+	lastX = mouse_pos.x;
+	lastY = mouse_pos.y;
 
-				float xoffset = mouse_pos.x - lastX;
-				float yoffset = lastY - mouse_pos.y; // reversed since y-coordinates go from bottom to top
-				lastX = mouse_pos.x;
-				lastY = mouse_pos.y;
+	float sensitivity = 0.1f; // change this value to your liking
+	xoffset *= sensitivity;
+	yoffset *= sensitivity;
 
-				float sensitivity = 0.1f; // change this value to your liking
-				xoffset *= sensitivity;
-				yoffset *= sensitivity;
+	yaw += xoffset;
+	pitch += yoffset;
 
-				yaw += xoffset;
-    			pitch += yoffset;
+	if (pitch > 89.0f) pitch = 89.0f;
+	if (pitch < -89.0f) pitch = -89.0f;
 
-				if (pitch > 89.0f) pitch = 89.0f;
-				if (pitch < -89.0f) pitch = -89.0f;
+	Vec3 front = {
+		-1 * math::sin(math::deg_to_rad(pitch)),
+		math::cos(math::deg_to_rad(yaw)) * math::cos(math::deg_to_rad(pitch)),
+		math::sin(math::deg_to_rad(yaw)) * math::cos(math::deg_to_rad(pitch))
+	};
 
-				Vec3 front = {
-					-1 * math::sin(math::deg_to_rad(pitch)),
-					math::cos(math::deg_to_rad(yaw)) * math::cos(math::deg_to_rad(pitch)),
-					math::sin(math::deg_to_rad(yaw)) * math::cos(math::deg_to_rad(pitch))
-				};
+	self.front = front.normalize();
 
-				self.front = front.normalize();
-			case MOUSE_SCROLL:
-				Vec2 scroll = gfx::get_mouse_scroll() * 0.1;
-				self.fov -= scroll.y;
-				if (self.fov < 1) self.fov = 1;
-				if (self.fov > 45) self.fov = 45;
-            default:
-                break;
-        }
+	// SCROLL
+	Vec2 scroll = gfx::get_mouse_scroll() * 0.1;
+	self.fov -= scroll.y;
+	if (self.fov < 1) self.fov = 1;
+	if (self.fov > 45) self.fov = 45;
 }
