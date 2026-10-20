@@ -25,3 +25,42 @@ fn void GfxWindow.input(&self, Camera* cam)
 
 	cam.update(self);
 }
+
+fn GfxWindow* create_window()
+{
+	gfx::init("Hello", { .init_opengl = true })!!;
+
+	gfx::load_opengl()!!;
+
+    GfxWindow* win = gfx::create_window("Hello", 200, 200, 900, 600)!!;
+
+    win.set_exit_key(ESCAPE);
+
+	GfxGlHints hints;
+	hints.major = 3;
+	hints.minor = 3;
+	hints.depth = 24;
+	GfxGlContext* cont = win.create_opengl_context(&hints)!!;
+
+	if (cont == null)
+	{
+		io::printn("Failed to create OpenGL 3.3 core context. Check driver support.");
+		return null;
+	}
+
+	gl::load_gl_internal((GLLoadFn)&gfx::get_opengl_proc);
+
+	gl::enable(GL_BLEND); 
+	gl::blendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	gl::enable(GL_DEPTH_TEST);
+	//gl::enable(GL_CULL_FACE);
+
+	return win;
+}
+
+fn void GfxWindow.destoy_window(&self)
+{
+	self.destroy();
+	gfx::unload_opengl();
+	gfx::finalize();
+}

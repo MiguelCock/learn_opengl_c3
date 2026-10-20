@@ -7,38 +7,16 @@ import std::thread;
 
 fn void main()
 {
-    gfx::init("Hello", { .init_opengl = true })!!;
-    defer gfx::finalize();
+	GfxWindow* win = create_window();
+	defer win.destoy_window();
 
-	gfx::load_opengl()!!;
-	defer gfx::unload_opengl();
+	if (win == null) return;
 
-    GfxWindow* win = gfx::create_window("Hello", 200, 200, 900, 600)!!;
-    defer win.destroy();
+	Shader base_shader = create_shader((GLchar**)&&BASE_VERT, (GLchar**)&&BASE_FRAG);
+    defer base_shader.delete_shader();
 
-    win.set_exit_key(ESCAPE);
-
-	GfxGlHints hints;
-	hints.major = 3;
-	hints.minor = 3;
-	hints.depth = 24;
-	GfxGlContext* cont = win.create_opengl_context(&hints)!!;
-
-	if (cont == null)
-	{
-		io::printn("Failed to create OpenGL 3.3 core context. Check driver support.");
-		return;
-	}
-
-	gl::load_gl_internal((GLLoadFn)&gfx::get_opengl_proc);
-
-	gl::enable(GL_BLEND); 
-	gl::blendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	gl::enable(GL_DEPTH_TEST);
-
-	Program program = create_program();
-    defer program.delete_program();
-    program.generate_vao();
+	Shader light_shader = create_shader((GLchar**)&&LIGHT_VERT, (GLchar**)&&LIGHT_FRAG);
+	defer light_shader.delete_shader();
 
 	Camera cam = create_camera();
 
@@ -46,11 +24,14 @@ fn void main()
     {
         win.input(&cam);
 
-		gl::clearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		gl::clearColor(0.1, 0.1, 0.1, 1);
 		gl::clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        program.send_uniform(&cam);
-		program.draw();
+		light_shader.send_uniform_light(&cam);
+		light_shader.draw_light();
+
+        base_shader.send_uniform_base(&cam);
+		base_shader.draw_base();
 
 		win.swap_opengl_buffers();
     }

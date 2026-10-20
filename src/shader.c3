@@ -6,7 +6,7 @@ import std::math::matrix;
 import opengl::gl;
 import spng;
 
-struct Program
+struct Shader
 {
 	GLuint vertexShader;
 	GLuint fragmentShader;
@@ -15,46 +15,48 @@ struct Program
 	GLuint texture;
 }
 
-const VERT = $embed("../resources/vert.vs");
-const FRAG = $embed("../resources/frag.fs");
+const BASE_VERT = $embed("../resources/base_vert.vs");
+const BASE_FRAG = $embed("../resources/base_frag.fs");
+const LIGHT_VERT = $embed("../resources/ligth_vert.vs");
+const LIGHT_FRAG = $embed("../resources/ligth_frag.fs");
 const IMG = $embed("../resources/leaves.png");
 
 float[*] vertices = {
-    // front face
-    -0.5, -0.5,  0.5,  0.0, 0.0,
-     0.5, -0.5,  0.5,  1.0, 0.0,
-     0.5,  0.5,  0.5,  1.0, 1.0,
-    -0.5,  0.5,  0.5,  0.0, 1.0,
+    // front face (+Z)
+    -0.5, -0.5,  0.5,  0.0, 0.0,   0.0,  0.0,  1.0,
+     0.5, -0.5,  0.5,  1.0, 0.0,   0.0,  0.0,  1.0,
+     0.5,  0.5,  0.5,  1.0, 1.0,   0.0,  0.0,  1.0,
+    -0.5,  0.5,  0.5,  0.0, 1.0,   0.0,  0.0,  1.0,
 
-    // back face
-     0.5, -0.5, -0.5,  0.0, 0.0,
-    -0.5, -0.5, -0.5,  1.0, 0.0,
-    -0.5,  0.5, -0.5,  1.0, 1.0,
-     0.5,  0.5, -0.5,  0.0, 1.0,
+    // back face (-Z)
+     0.5, -0.5, -0.5,  0.0, 0.0,   0.0,  0.0, -1.0,
+    -0.5, -0.5, -0.5,  1.0, 0.0,   0.0,  0.0, -1.0,
+    -0.5,  0.5, -0.5,  1.0, 1.0,   0.0,  0.0, -1.0,
+     0.5,  0.5, -0.5,  0.0, 1.0,   0.0,  0.0, -1.0,
 
-    // left face
-    -0.5, -0.5, -0.5,  0.0, 0.0,
-    -0.5, -0.5,  0.5,  1.0, 0.0,
-    -0.5,  0.5,  0.5,  1.0, 1.0,
-    -0.5,  0.5, -0.5,  0.0, 1.0,
+    // left face (-X)
+    -0.5, -0.5, -0.5,  0.0, 0.0,  -1.0,  0.0,  0.0,
+    -0.5, -0.5,  0.5,  1.0, 0.0,  -1.0,  0.0,  0.0,
+    -0.5,  0.5,  0.5,  1.0, 1.0,  -1.0,  0.0,  0.0,
+    -0.5,  0.5, -0.5,  0.0, 1.0,  -1.0,  0.0,  0.0,
 
-    // right face
-     0.5, -0.5,  0.5,  0.0, 0.0,
-     0.5, -0.5, -0.5,  1.0, 0.0,
-     0.5,  0.5, -0.5,  1.0, 1.0,
-     0.5,  0.5,  0.5,  0.0, 1.0,
+    // right face (+X)
+     0.5, -0.5,  0.5,  0.0, 0.0,   1.0,  0.0,  0.0,
+     0.5, -0.5, -0.5,  1.0, 0.0,   1.0,  0.0,  0.0,
+     0.5,  0.5, -0.5,  1.0, 1.0,   1.0,  0.0,  0.0,
+     0.5,  0.5,  0.5,  0.0, 1.0,   1.0,  0.0,  0.0,
 
-    // bottom face
-    -0.5, -0.5, -0.5,  0.0, 0.0,
-     0.5, -0.5, -0.5,  1.0, 0.0,
-     0.5, -0.5,  0.5,  1.0, 1.0,
-    -0.5, -0.5,  0.5,  0.0, 1.0,
+    // bottom face (-Y)
+    -0.5, -0.5, -0.5,  0.0, 0.0,   0.0, -1.0,  0.0,
+     0.5, -0.5, -0.5,  1.0, 0.0,   0.0, -1.0,  0.0,
+     0.5, -0.5,  0.5,  1.0, 1.0,   0.0, -1.0,  0.0,
+    -0.5, -0.5,  0.5,  0.0, 1.0,   0.0, -1.0,  0.0,
 
-    // top face
-     0.5,  0.5, -0.5,  1.0, 1.0,
-    -0.5,  0.5, -0.5,  0.0, 1.0,
-    -0.5,  0.5,  0.5,  0.0, 0.0,
-     0.5,  0.5,  0.5,  1.0, 0.0
+    // top face (+Y)
+     0.5,  0.5, -0.5,  1.0, 1.0,   0.0,  1.0,  0.0,
+    -0.5,  0.5, -0.5,  0.0, 1.0,   0.0,  1.0,  0.0,
+    -0.5,  0.5,  0.5,  0.0, 0.0,   0.0,  1.0,  0.0,
+     0.5,  0.5,  0.5,  1.0, 0.0,   0.0,  1.0,  0.0
 };
 
 GLuint[*] indices = {
@@ -66,62 +68,60 @@ GLuint[*] indices = {
     20, 21, 22, 22, 23, 20   // top
 };
 
-fn Program create_program()
+fn Shader create_shader(GLchar** vert, GLchar** frag)
 {
-	Program program;
+	Shader shader;
 
-	program.vertexShader = gl::createShader(GL_VERTEX_SHADER);
-	gl::shaderSource(program.vertexShader, 1, (GLchar**)&&VERT, null);
-    gl::compileShader(program.vertexShader);
-	check_for_errors("ERROR::SHADER::VERTEX::COMPILATION_FAILED: %s", program.vertexShader);
+	shader.vertexShader = gl::createShader(GL_VERTEX_SHADER);
+	gl::shaderSource(shader.vertexShader, 1, vert, null);
+    gl::compileShader(shader.vertexShader);
+	check_for_errors("ERROR::SHADER::VERTEX::COMPILATION_FAILED: %s", shader.vertexShader);
 
-    program.fragmentShader = gl::createShader(GL_FRAGMENT_SHADER);
-    gl::shaderSource(program.fragmentShader, 1, (GLchar**)&&FRAG, null);
-    gl::compileShader(program.fragmentShader);
-	check_for_errors("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED: %s", program.fragmentShader);
+    shader.fragmentShader = gl::createShader(GL_FRAGMENT_SHADER);
+    gl::shaderSource(shader.fragmentShader, 1, frag, null);
+    gl::compileShader(shader.fragmentShader);
+	check_for_errors("ERROR::SHADER::FRAGMENT::COMPILATION_FAILED: %s", shader.fragmentShader);
 
-    program.shaderProgram = gl::createProgram();
-    gl::attachShader(program.shaderProgram, program.vertexShader);
-    gl::attachShader(program.shaderProgram, program.fragmentShader);
-    gl::linkProgram(program.shaderProgram);
+    shader.shaderProgram = gl::createProgram();
+    gl::attachShader(shader.shaderProgram, shader.vertexShader);
+    gl::attachShader(shader.shaderProgram, shader.fragmentShader);
+    gl::linkProgram(shader.shaderProgram);
 	int success;
     char[512] infoLog;
-	gl::getProgramiv(program.shaderProgram, GL_LINK_STATUS, &success);
+	gl::getProgramiv(shader.shaderProgram, GL_LINK_STATUS, &success);
     if (!success) {
-        gl::getProgramInfoLog(program.shaderProgram, 512, null, &infoLog);
+        gl::getProgramInfoLog(shader.shaderProgram, 512, null, &infoLog);
 		io::printfn("ERROR::SHADER::PROGRAM::LINKING_FAILED: %s", (String)&infoLog);
     }
 
-    gl::deleteShader(program.vertexShader);
-    gl::deleteShader(program.fragmentShader);
+    gl::deleteShader(shader.vertexShader);
+    gl::deleteShader(shader.fragmentShader);
 
-	return program;
-}
+	// ================ VAO ================
+	gl::genVertexArrays(1, &shader.vao);
+    gl::genBuffers(1, &shader.vbo);
+    gl::genBuffers(1, &shader.ebo);
+    gl::bindVertexArray(shader.vao);
 
-fn void Program.generate_vao(&self)
-{
-	gl::genVertexArrays(1, &self.vao);
-    gl::genBuffers(1, &self.vbo);
-    gl::genBuffers(1, &self.ebo);
-    gl::bindVertexArray(self.vao);
-
-    gl::bindBuffer(GL_ARRAY_BUFFER, self.vbo);
+    gl::bindBuffer(GL_ARRAY_BUFFER, shader.vbo);
     gl::bufferData(GL_ARRAY_BUFFER, vertices.len * float::size, &vertices, GL_STATIC_DRAW);
 
-    gl::bindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.ebo);
+    gl::bindBuffer(GL_ELEMENT_ARRAY_BUFFER, shader.ebo);
     gl::bufferData(GL_ELEMENT_ARRAY_BUFFER, indices.len * GLuint::size, &indices, GL_STATIC_DRAW);
 
-    gl::vertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * float::size, null);
+    gl::vertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * float::size, null);
     gl::enableVertexAttribArray(0);
 
-	gl::vertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * float::size, (void*)(3 * float::size));
+	gl::vertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * float::size, (void*)(3 * float::size));
     gl::enableVertexAttribArray(1);
+
+	gl::vertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * float::size, (void*)(5 * float::size));
+    gl::enableVertexAttribArray(2);
 
     gl::bindBuffer(GL_ARRAY_BUFFER, 0); 
 
-	self.texture;
-    gl::genTextures(1, &self.texture);
-    gl::bindTexture(GL_TEXTURE_2D, self.texture);
+    gl::genTextures(1, &shader.texture);
+    gl::bindTexture(GL_TEXTURE_2D, shader.texture);
     gl::texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	gl::texParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     gl::texParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
@@ -141,9 +141,11 @@ fn void Program.generate_vao(&self)
     gl::generateMipmap(GL_TEXTURE_2D);
 
     gl::bindVertexArray(0);
+
+	return shader;
 }
 
-fn void Program.delete_program(&self)
+fn void Shader.delete_shader(&self)
 {
 	gl::deleteProgram(self.shaderProgram);
 
@@ -153,46 +155,62 @@ fn void Program.delete_program(&self)
 }
 
 float timeValue;
+Vec3 light_pos = {-1.3f,  1.0f, -1.5f};
 
-fn void Program.send_uniform(&self, Camera* cam)
+fn void Shader.send_uniform_base(&self, Camera* cam)
 {
 	timeValue += 0.005;
-	float greenValue = (math::sin(timeValue)) + 0.5;
-	int vertexColorLocation = gl::getUniformLocation(self.shaderProgram, "color");
-	gl::uniform4f(vertexColorLocation, 0, 0, 0, 1);
+
+	gl::bindTexture(GL_TEXTURE_2D, self.texture);
+	gl::useProgram(self.shaderProgram);
 
 	Mat4 mat = matrix::IDENTITY4.translate({math::cos(timeValue), math::sin(timeValue), 0}).rotate(timeValue*5, {1, 1, 1});
-	int transform_location = gl::getUniformLocation(self.shaderProgram, "transform");
-    gl::uniformMatrix4fv(transform_location, 1, GL_FALSE, (GLfloat*)&mat);
+    //Mat4 mat = matrix::IDENTITY4;
+	gl::uniformMatrix4fv(gl::getUniformLocation(self.shaderProgram, "transform"), 1, GL_FALSE, (GLfloat*)&mat);
 
-	cam.view = matrix::look_at(cam.pos, cam.pos + cam.front, cam.up);
-	int view_location = gl::getUniformLocation(self.shaderProgram, "view");
-    gl::uniformMatrix4fv(view_location, 1, GL_FALSE, (GLfloat*)&cam.view);
+    gl::uniformMatrix4fv(gl::getUniformLocation(self.shaderProgram, "view"), 1, GL_FALSE, (GLfloat*)&cam.view);
 
-	Mat4 projection = matrix::perspective(cam.fov, 800/600, 0.1, 100);
-	int projection_location = gl::getUniformLocation(self.shaderProgram, "projection");
-    gl::uniformMatrix4fv(projection_location, 1, GL_FALSE, (GLfloat*)&projection);
+	Mat4 projection = matrix::perspective(cam.zoom, 800/600, 0.1, 100);
+    gl::uniformMatrix4fv(gl::getUniformLocation(self.shaderProgram, "projection"), 1, GL_FALSE, (GLfloat*)&projection);
+
+	// light
+    gl::uniform3fv(gl::getUniformLocation(self.shaderProgram, "lightPos"), 1, &light_pos);
+    gl::uniform3fv(gl::getUniformLocation(self.shaderProgram, "viewPos"), 1, (GLfloat*)&cam.pos);
+    gl::uniform3f(gl::getUniformLocation(self.shaderProgram, "lightColor"), 1, 1, 1);
+}
+
+fn void Shader.send_uniform_light(&self, Camera* cam)
+{
+	gl::bindTexture(GL_TEXTURE_2D, self.texture);
+	gl::useProgram(self.shaderProgram);
+
+	Mat4 mat = matrix::IDENTITY4.translate({math::cos(timeValue), math::sin(timeValue), 0}).rotate(timeValue*5, {1, 1, 1});
+    gl::uniformMatrix4fv(gl::getUniformLocation(self.shaderProgram, "transform"), 1, GL_FALSE, (GLfloat*)&mat);
+
+    gl::uniformMatrix4fv(gl::getUniformLocation(self.shaderProgram, "view"), 1, GL_FALSE, (GLfloat*)&cam.view);
+
+	Mat4 projection = matrix::perspective(cam.zoom, 800/600, 0.1, 100);
+    gl::uniformMatrix4fv(gl::getUniformLocation(self.shaderProgram, "projection"), 1, GL_FALSE, (GLfloat*)&projection);
+
+	Mat4 model = matrix::IDENTITY4.translate(light_pos);
+	gl::uniformMatrix4fv(gl::getUniformLocation(self.shaderProgram, "model"), 1, GL_FALSE, (GLfloat*)&model);
 }
 
 Vec3[*] cubePositions = {
-    { 0.0f,  0.0f,  0.0f}, 
-    { 2.0f,  5.0f, -15.0f}, 
-    {-1.5f, -2.2f, -2.5f},  
-    {-3.8f, -2.0f, -12.3f},  
-    { 2.4f, -0.4f, -3.5f},  
-    {-1.7f,  3.0f, -7.5f},  
-    { 1.3f, -2.0f, -2.5f},  
-    { 1.5f,  2.0f, -2.5f}, 
-    { 1.5f,  0.2f, -1.5f}, 
-    {-1.3f,  1.0f, -1.5f}  
+    { 0.0f,  0.0f,  0.0f},
+    { 2.0f,  5.0f, -15.0f},
+    {-1.5f, -2.2f, -2.5f},
+    {-3.8f, -2.0f, -12.3f},
+    { 2.4f, -0.4f, -3.5f},
+    {-1.7f,  3.0f, -7.5f},
+    { 1.3f, -2.0f, -2.5f},
+    { 1.5f,  2.0f, -2.5f},
+    { 1.5f,  0.2f, -1.5f},
+    {-1.3f,  1.0f, -1.5f}
 };
 
-fn void Program.draw(&self)
+fn void Shader.draw_base(&self)
 {
-	gl::bindTexture(GL_TEXTURE_2D, self.texture);
-
-	gl::useProgram(self.shaderProgram);
-
 	gl::bindVertexArray(self.vao);
 
 	for(uint i = 0; i < 10; i++)
@@ -203,4 +221,10 @@ fn void Program.draw(&self)
 
 		gl::drawElements(GL_TRIANGLES, indices.len, GL_UNSIGNED_INT, null);
 	}
+}
+
+fn void Shader.draw_light(&self)
+{
+	gl::bindVertexArray(self.vao);
+	gl::drawElements(GL_TRIANGLES, indices.len, GL_UNSIGNED_INT, null);
 }

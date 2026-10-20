@@ -16,7 +16,7 @@ struct Camera
 	Vec3 front;
 	Vec3 right;
 	Vec3 up;
-	float fov;
+	float zoom;
 }
 
 fn Camera create_camera()
@@ -29,13 +29,13 @@ fn Camera create_camera()
 	cam.front = {0, 0, -1};
 	cam.right = {0, 1, 0}.cross(cam.direction).normalize();
 	cam.up = cam.direction.cross(cam.right);
-	cam.fov = (float)math::deg_to_rad(45);
+	cam.zoom = (float)math::deg_to_rad(45);
 
 	return cam;
 }
 
-float yaw = -120;
-float pitch = 20;
+float yaw = -150;
+float pitch = -20;
 float lastX =  900 / 2;
 float lastY =  600 / 2;
 bool firstMouse = true;
@@ -60,11 +60,11 @@ fn void Camera.update(&self, GfxWindow* win)
 	}
 
 	float xoffset = mouse_pos.x - lastX;
-	float yoffset = lastY - mouse_pos.y; // reversed since y-coordinates go from bottom to top
+	float yoffset = mouse_pos.y - lastY ;
 	lastX = mouse_pos.x;
 	lastY = mouse_pos.y;
 
-	float sensitivity = 0.1f; // change this value to your liking
+	float sensitivity = 0.15f;
 	xoffset *= sensitivity;
 	yoffset *= sensitivity;
 
@@ -75,7 +75,7 @@ fn void Camera.update(&self, GfxWindow* win)
 	if (pitch < -89.0f) pitch = -89.0f;
 
 	Vec3 front = {
-		-1 * math::sin(math::deg_to_rad(pitch)),
+		math::sin(math::deg_to_rad(pitch)),
 		math::cos(math::deg_to_rad(yaw)) * math::cos(math::deg_to_rad(pitch)),
 		math::sin(math::deg_to_rad(yaw)) * math::cos(math::deg_to_rad(pitch))
 	};
@@ -84,7 +84,9 @@ fn void Camera.update(&self, GfxWindow* win)
 
 	// SCROLL
 	Vec2 scroll = gfx::get_mouse_scroll() * 0.1;
-	self.fov -= scroll.y;
-	if (self.fov < 1) self.fov = 1;
-	if (self.fov > 45) self.fov = 45;
+	self.zoom -= scroll.y;
+	if (self.zoom < 1) self.zoom = 1;
+	if (self.zoom > 45) self.zoom = 45;
+
+	self.view = matrix::look_at(self.pos, self.pos + self.front, self.up);
 }
