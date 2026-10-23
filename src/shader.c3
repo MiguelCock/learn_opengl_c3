@@ -155,7 +155,14 @@ fn void Shader.delete_shader(&self)
 }
 
 float timeValue;
-Vec3 light_pos = {-1.3f,  1.0f, -1.5f};
+Vec3 light_pos = {5, 5, -5};
+
+struct Material {
+    Vec3 ambient;
+    Vec3 diffuse;
+    Vec3 specular;
+    float shininess;
+}
 
 fn void Shader.send_uniform_base(&self, Camera* cam)
 {
@@ -164,13 +171,13 @@ fn void Shader.send_uniform_base(&self, Camera* cam)
 	gl::bindTexture(GL_TEXTURE_2D, self.texture);
 	gl::useProgram(self.shaderProgram);
 
-	Mat4 mat = matrix::IDENTITY4.translate({math::cos(timeValue), math::sin(timeValue), 0}).rotate(timeValue*5, {1, 1, 1});
-    //Mat4 mat = matrix::IDENTITY4;
+	//Mat4 mat = matrix::IDENTITY4.translate({math::cos(timeValue), math::sin(timeValue), 0}).rotate(timeValue*5, {1, 1, 1});
+    Mat4 mat = matrix::IDENTITY4;
 	gl::uniformMatrix4fv(gl::getUniformLocation(self.shaderProgram, "transform"), 1, GL_FALSE, (GLfloat*)&mat);
 
     gl::uniformMatrix4fv(gl::getUniformLocation(self.shaderProgram, "view"), 1, GL_FALSE, (GLfloat*)&cam.view);
 
-	Mat4 projection = matrix::perspective(cam.zoom, 800/600, 0.1, 100);
+	Mat4 projection = matrix::perspective(cam.zoom, 900/600, 0.1, 100);
     gl::uniformMatrix4fv(gl::getUniformLocation(self.shaderProgram, "projection"), 1, GL_FALSE, (GLfloat*)&projection);
 
 	// light
@@ -181,15 +188,20 @@ fn void Shader.send_uniform_base(&self, Camera* cam)
 
 fn void Shader.send_uniform_light(&self, Camera* cam)
 {
+	float factor = 2;
+	light_pos = {math::cos(timeValue) * factor, math::sin(timeValue) * factor, 2};
+
+    //light_pos = light_pos.rotate_axis({1, 0, 0}, math::cos(timeValue) / 2);
+
 	gl::bindTexture(GL_TEXTURE_2D, self.texture);
 	gl::useProgram(self.shaderProgram);
 
-	Mat4 mat = matrix::IDENTITY4.translate({math::cos(timeValue), math::sin(timeValue), 0}).rotate(timeValue*5, {1, 1, 1});
+	Mat4 mat = matrix::IDENTITY4.rotate(timeValue*5, {1, 1, 1});
     gl::uniformMatrix4fv(gl::getUniformLocation(self.shaderProgram, "transform"), 1, GL_FALSE, (GLfloat*)&mat);
 
     gl::uniformMatrix4fv(gl::getUniformLocation(self.shaderProgram, "view"), 1, GL_FALSE, (GLfloat*)&cam.view);
 
-	Mat4 projection = matrix::perspective(cam.zoom, 800/600, 0.1, 100);
+	Mat4 projection = matrix::perspective(cam.zoom, 900/600, 0.1, 100);
     gl::uniformMatrix4fv(gl::getUniformLocation(self.shaderProgram, "projection"), 1, GL_FALSE, (GLfloat*)&projection);
 
 	Mat4 model = matrix::IDENTITY4.translate(light_pos);
@@ -197,27 +209,45 @@ fn void Shader.send_uniform_light(&self, Camera* cam)
 }
 
 Vec3[*] cubePositions = {
-    { 0.0f,  0.0f,  0.0f},
-    { 2.0f,  5.0f, -15.0f},
-    {-1.5f, -2.2f, -2.5f},
-    {-3.8f, -2.0f, -12.3f},
-    { 2.4f, -0.4f, -3.5f},
-    {-1.7f,  3.0f, -7.5f},
-    { 1.3f, -2.0f, -2.5f},
-    { 1.5f,  2.0f, -2.5f},
-    { 1.5f,  0.2f, -1.5f},
-    {-1.3f,  1.0f, -1.5f}
+    {-1, -1, 0},
+    {-1, 0, 0},
+    {-1, 1, 0},
+    {-1, 2, 0},
+    {0, -1, 0},
+    {0, 0, 0},
+    {0, 1, 0},
+    {0, 2, 0},
+    {1, 0, 0},
+    {1, 1, 0}
+};
+
+Material[*] cubeMaterials = {
+	{ {0.0215, 0.1745, 0.0215}, {0.07568, 0.61424, 0.07568}, {0.633, 0.727811, 0.633}, 0.6 }, //emerald
+	{ {0.2125, 0.1275, 0.054}, {0.714, 0.4284, 0.18144}, {0.393548, 0.271906, 0.166721}, 1 }, // bronze
+	{ {0.05375, 0.05, 0.06625}, {0.18275, 0.17, 0.22525}, {0.332741, 0.328634, 0.346435}, 0.3 }, // obsidian
+	{ {0, 0, 0}, {0.1, 0.35, 0.1}, {0.45, 0.55, 0.45}, 0.25 }, // green plastic
+	{ {0.05, 0.05, 0.05}, {0.05, 0.05, 0.05}, {0.7, 0.7, 0.7}, 0.078125 }, // white rubber
+	{ {0.25, 0.25, 0.25}, {0.4, 0.4, 0.4}, {0.774597, 0.774597, 0.774597}, 0.6 }, //chrome
+	{ {0.02, 0.02, 0.02}, {0.01, 0.01, 0.01}, {0.4, 0.4, 0.4}, 0.6 }, // black rubber
+	{ {0.1745, 0.01175, 0.01175}, {0.61424, 0.04136, 0.04136}, {0.727811, 0.626959, 0.626959}, 0.6 }, // ruby
+	{ {0, 0, 0}, {0.1, 0.35, 0.1}, {0.45, 0.55, 0.45}, 0.25 }, // green plastic
+	{ {0.05, 0.05, 0.05}, {0.05, 0.05, 0.05}, {0.7, 0.7, 0.7}, 0.078125 }, // white rubber
+    // { {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, 0}
 };
 
 fn void Shader.draw_base(&self)
 {
 	gl::bindVertexArray(self.vao);
 
-	for(uint i = 0; i < 10; i++)
+	for(int i = 0; i < 10; i++)
 	{
-		Mat4 model = matrix::IDENTITY4.translate(cubePositions[i]).rotate((float)math::deg_to_rad(20 * i), {1, 0.3, 0.5});
-		int model_location = gl::getUniformLocation(self.shaderProgram, "model");
-    	gl::uniformMatrix4fv(model_location, 1, GL_FALSE, (GLfloat*)&model);
+		Mat4 model = matrix::IDENTITY4.translate(cubePositions[i]);
+    	gl::uniformMatrix4fv(gl::getUniformLocation(self.shaderProgram, "model"), 1, GL_FALSE, (GLfloat*)&model);
+
+		gl::uniform3fv(gl::getUniformLocation(self.shaderProgram, "material.ambient"), 1, &cubeMaterials[i].ambient);
+		gl::uniform3fv(gl::getUniformLocation(self.shaderProgram, "material.diffuse"), 1, &cubeMaterials[i].diffuse);
+		gl::uniform3fv(gl::getUniformLocation(self.shaderProgram, "material.specular"), 1, &cubeMaterials[i].specular);
+		gl::uniform1fv(gl::getUniformLocation(self.shaderProgram, "material.shininess"), 1, &cubeMaterials[i].shininess);
 
 		gl::drawElements(GL_TRIANGLES, indices.len, GL_UNSIGNED_INT, null);
 	}

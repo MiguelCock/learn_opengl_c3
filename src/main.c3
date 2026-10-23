@@ -24,7 +24,9 @@ fn void main()
     {
         win.input(&cam);
 
-		gl::clearColor(0.1, 0.1, 0.1, 1);
+		if (gfx::is_key_down(SPACE, win)) continue;
+
+		gl::clearColor(0.3, 0.3, 0.3, 1);
 		gl::clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		light_shader.send_uniform_light(&cam);
